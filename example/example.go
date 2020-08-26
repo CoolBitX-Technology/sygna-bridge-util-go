@@ -1,0 +1,296 @@
+package example
+
+import (
+	"log"
+
+	bridgeutil "github.com/CoolBitX-Technology/sygna-bridge-util-go"
+	"github.com/iancoleman/orderedmap"
+)
+
+const domain = bridgeutil.SygnaBridgeAPITestDomain
+
+const (
+	originatorAPIKey     = "{{originatorAPIKey}}"
+	originatorPrivatekey = "{{originatorPrivatekey}}"
+	originatorPublicKey  = "{{originatorPublicKey}}"
+)
+
+const (
+	beneficiaryAPIKey     = "{{beneficiaryAPIKey}}"
+	beneficiaryPrivatekey = "{{beneficiaryPrivatekey}}"
+	beneficiaryPublicKey  = "{{beneficiaryPublicKey}}"
+)
+
+func encryptAndDecrypt() {
+	originator := orderedmap.New()
+	originator.Set("name", "Antoine Griezmann")
+	originator.Set("date_of_birth", "1991-03-21")
+
+	beneficiary := orderedmap.New()
+	beneficiary.Set("name", "利昂內爾 梅西")
+
+	sensitiveData := orderedmap.New()
+	sensitiveData.Set("originator", originator)
+	sensitiveData.Set("beneficiary", beneficiary)
+
+	ciphertext, err := bridgeutil.Encrypt(sensitiveData, originatorPublicKey)
+	if err != nil {
+		panic(err)
+	}
+	log.Printf("plaintext encrypted: %v\n", ciphertext)
+
+	plaintext, err := bridgeutil.Decrypt(ciphertext, originatorPrivatekey)
+	if err != nil {
+		panic(err)
+	}
+	strPlaintext, _ := bridgeutil.OrderedMapToString(plaintext.(*orderedmap.OrderedMap))
+	log.Printf("plaintext decrypted: %v\n", strPlaintext)
+}
+
+func signAndVerify() {
+
+	o := orderedmap.New()
+	o.Set("transfer_id", "b97903fd68fcff05cfe035482bc3cf7fd934505b4e0644e612087dca4bae37e4")
+	o.Set("txid", "6f721fba0d405df21fb27dd76cfe2b548907f3881c5625b9cfe624c15c3178ae")
+
+	err := bridgeutil.Sign(o, originatorPrivatekey)
+	if err != nil {
+		panic(err)
+	}
+	strMap, _ := bridgeutil.OrderedMapToString(o)
+	log.Printf("signed data: %v\n", strMap)
+
+	valid, err := bridgeutil.Verify(o, originatorPublicKey)
+	if err != nil {
+		panic(err)
+	}
+	log.Printf("valid: %v\n", valid)
+}
+
+func getVASP() {
+	api := &bridgeutil.BridgeAPI{
+		APIDomain: domain,
+		APIKey:    originatorAPIKey,
+	}
+	response, err := api.GetVASP(true)
+	if err != nil {
+		panic(err)
+	}
+	strResponse, _ := bridgeutil.OrderedMapToString(response...)
+	log.Printf("GetVASP response: %v\n", strResponse)
+}
+
+func getVASPPublicKey() {
+	targetVASPCode := "VASPUSNY1"
+
+	api := &bridgeutil.BridgeAPI{
+		APIDomain: domain,
+		APIKey:    originatorAPIKey,
+	}
+	response, err := api.GetVASPPublicKey(targetVASPCode, true)
+	if err != nil {
+		panic(err)
+	}
+	log.Printf("GetVASPPublicKey response: %v\n", response)
+}
+
+func getStatus() {
+	transferID := "077fdce779ce0d4eda296eb34759db6b361a85abac053bfa63cea411ef85bf44"
+
+	api := &bridgeutil.BridgeAPI{
+		APIDomain: domain,
+		APIKey:    originatorAPIKey,
+	}
+	response, err := api.GetStatus(transferID)
+	if err != nil {
+		panic(err)
+	}
+	strResponse, _ := bridgeutil.OrderedMapToString(response)
+	log.Printf("response: %v\n", strResponse)
+}
+
+func getCurrencies() {
+	queryParam := orderedmap.New()
+	queryParam.Set("currency_id", "sygna:0x80000090")
+
+	api := &bridgeutil.BridgeAPI{
+		APIDomain: domain,
+		APIKey:    originatorAPIKey,
+	}
+	response, err := api.GetCurrencies(queryParam)
+	if err != nil {
+		panic(err)
+	}
+	strResponse, _ := bridgeutil.OrderedMapToString(response...)
+	log.Printf("GetCurrencies response: %v\n", strResponse)
+}
+
+func postPermissionRequest() {
+
+	originator := orderedmap.New()
+	originator.Set("name", "Antoine Griezmann")
+	originator.Set("date_of_birth", "1991-03-21")
+
+	beneficiary := orderedmap.New()
+	beneficiary.Set("name", "Leo Messi")
+
+	sensitiveData := orderedmap.New()
+	sensitiveData.Set("originator", originator)
+	sensitiveData.Set("beneficiary", beneficiary)
+
+	ciphertext, err := bridgeutil.Encrypt(sensitiveData, beneficiaryPublicKey)
+	if err != nil {
+		panic(err)
+	}
+
+	originatorAddr := orderedmap.New()
+	originatorAddr.Set("address", "r3kmLJN5D28dHuH8vZNUZpMC43pEHpaocV")
+
+	originatorAddrs := make([]*orderedmap.OrderedMap, 1)
+	originatorAddrs[0] = originatorAddr
+
+	originatorVASP := orderedmap.New()
+	originatorVASP.Set("vasp_code", "VASPUSNY1")
+	originatorVASP.Set("addrs", originatorAddrs)
+
+	beneficiaryAddrInfo := orderedmap.New()
+	beneficiaryAddrInfo.Set("tag", "abc")
+
+	beneficiaryAddrInfos := make([]*orderedmap.OrderedMap, 1)
+	beneficiaryAddrInfos[0] = beneficiaryAddrInfo
+
+	beneficiaryAddr := orderedmap.New()
+	beneficiaryAddr.Set("address", "rAPERVgXZavGgiGv6xBgtiZurirW2yAmY")
+	beneficiaryAddr.Set("addr_extra_info", beneficiaryAddrInfos)
+
+	beneficiaryAddrs := make([]*orderedmap.OrderedMap, 1)
+	beneficiaryAddrs[0] = beneficiaryAddr
+
+	beneficiaryVASP := orderedmap.New()
+	beneficiaryVASP.Set("vasp_code", "VASPUSNY2")
+	beneficiaryVASP.Set("addrs", beneficiaryAddrs)
+
+	transaction := orderedmap.New()
+	transaction.Set("originator_vasp", originatorVASP)
+	transaction.Set("beneficiary_vasp", beneficiaryVASP)
+	transaction.Set("currency_id", "sygna:0x80000090")
+	transaction.Set("amount", "4.51120135938784")
+
+	permissionRequestData := orderedmap.New()
+	permissionRequestData.Set("private_info", ciphertext)
+	permissionRequestData.Set("transaction", transaction)
+	permissionRequestData.Set("data_dt", "2020-07-13T05:56:53.088Z")
+
+	err = bridgeutil.Sign(permissionRequestData, originatorPrivatekey)
+	if err != nil {
+		panic(err)
+	}
+
+	callbackData := orderedmap.New()
+	callbackData.Set("callback_url", "https://facb1c03d3dae42f07008d0c42979623.m.pipedream.net")
+	err = bridgeutil.Sign(callbackData, originatorPrivatekey)
+	if err != nil {
+		panic(err)
+	}
+
+	postPermissionRequestData := orderedmap.New()
+	postPermissionRequestData.Set("data", permissionRequestData)
+	postPermissionRequestData.Set("callback", callbackData)
+
+	api := &bridgeutil.BridgeAPI{
+		APIDomain: domain,
+		APIKey:    originatorAPIKey,
+	}
+	response, err := api.PostPermissionRequest(postPermissionRequestData)
+	if err != nil {
+		panic(err)
+	}
+	strResponse, _ := bridgeutil.OrderedMapToString(response)
+	log.Printf("PostPermissionRequest response: %v\n", strResponse)
+}
+
+func postPermission() {
+	transferID := "e8867006137a94f13656198be8fa720cf5b822f70adf6fe71a25538d0b2c230e"
+	postPermissionData := orderedmap.New()
+	postPermissionData.Set("transfer_id", transferID)
+	postPermissionData.Set("permission_status", bridgeutil.PermissionStatusAccepted)
+
+	err := bridgeutil.Sign(postPermissionData, beneficiaryPrivatekey)
+	if err != nil {
+		panic(err)
+	}
+
+	api := &bridgeutil.BridgeAPI{
+		APIDomain: domain,
+		APIKey:    beneficiaryAPIKey,
+	}
+	response, err := api.PostPermission(postPermissionData)
+	if err != nil {
+		panic(err)
+	}
+	strResponse, _ := bridgeutil.OrderedMapToString(response)
+	log.Printf("PostPermission response: %v\n", strResponse)
+}
+
+func postTransactionID() {
+	transferID := "e8867006137a94f13656198be8fa720cf5b822f70adf6fe71a25538d0b2c230e"
+	txID := "6f721fba0d405df21fb27dd76cfe2b548907f3881c5625b9cfe624c15c3178ae"
+	postTxIDData := orderedmap.New()
+	postTxIDData.Set("transfer_id", transferID)
+	postTxIDData.Set("txid", txID)
+
+	err := bridgeutil.Sign(postTxIDData, originatorPrivatekey)
+	if err != nil {
+		panic(err)
+	}
+
+	api := &bridgeutil.BridgeAPI{
+		APIDomain: domain,
+		APIKey:    originatorAPIKey,
+	}
+	response, err := api.PostTransactionID(postTxIDData)
+	if err != nil {
+		panic(err)
+	}
+	strResponse, _ := bridgeutil.OrderedMapToString(response)
+	log.Printf("PostTxId response: %v\n", strResponse)
+}
+
+func postBeneficiaryEndpointURL() {
+	postBeneficiaryEndpointURLData := orderedmap.New()
+	postBeneficiaryEndpointURLData.Set("vasp_code", "VASPUSNY2")
+	postBeneficiaryEndpointURLData.Set("callback_permission_request_url", "https://google.com")
+	postBeneficiaryEndpointURLData.Set("callback_txid_url", "https://stackoverflow.com")
+	postBeneficiaryEndpointURLData.Set("callback_validate_addr_url", "https://github.com")
+
+	err := bridgeutil.Sign(postBeneficiaryEndpointURLData, beneficiaryPrivatekey)
+	if err != nil {
+		panic(err)
+	}
+	api := &bridgeutil.BridgeAPI{
+		APIDomain: domain,
+		APIKey:    beneficiaryAPIKey,
+	}
+	response, err := api.PostBeneficiaryEndpointURL(postBeneficiaryEndpointURLData)
+	if err != nil {
+		panic(err)
+	}
+	strResponse, _ := bridgeutil.OrderedMapToString(response)
+	log.Printf("postBeneficiaryEndpointURL response: %v\n", strResponse)
+}
+
+func postRetry() {
+	postRetryData := orderedmap.New()
+	postRetryData.Set("vasp_code", "VASPUSNY2")
+
+	api := &bridgeutil.BridgeAPI{
+		APIDomain: domain,
+		APIKey:    beneficiaryAPIKey,
+	}
+	response, err := api.PostRetry(postRetryData)
+	if err != nil {
+		panic(err)
+	}
+	strResponse, _ := bridgeutil.OrderedMapToString(response)
+	log.Printf("postRetry response: %v\n", strResponse)
+}
