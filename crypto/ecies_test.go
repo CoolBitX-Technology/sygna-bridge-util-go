@@ -75,13 +75,6 @@ func TestDecrypt(t *testing.T) {
 	o := orderedmap.New()
 	o.UnmarshalJSON([]byte(`{"transfer_id":"2535e84afdee114b090e0d6b65772b600c852618d50b38770f653d478490d876","permission_status":"ACCEPTED","signature":"01a62295e3e52a824c92427db26d13f21feb01a4fa3f99ead0de2baecbd3526d52597e27e3df2085bd191d6da1793770459e32f46c943ff18125af9dc409907f"}`))
 
-	// {
-	// 	currency_id: 'sygna:0x80000090',
-	// 	currency_name: 'XRP',
-	// 	currency_symbol: 'XRP',
-	// 	is_active: true,
-	// 	addr_extra_info: ['tag'],
-	// }
 	o1 := orderedmap.New()
 	o1.Set("currency_id", "sygna:0x80000090")
 	o1.Set("currency_name", "XRP")
