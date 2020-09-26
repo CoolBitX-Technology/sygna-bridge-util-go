@@ -34,9 +34,12 @@ jobs:
           queries: security-and-quality
 
       - name: Setup go
-        uses: actions/setup-go@v1
+        uses: actions/setup-go@latest
         with:
-          go-version: "1.13"
+          go-version: "1.15"
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v1
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v1
