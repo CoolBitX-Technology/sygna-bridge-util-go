@@ -21,55 +21,55 @@ const (
 	beneficiaryPublicKey  = "{{beneficiaryPublicKey}}"
 )
 
-func encryptAndDecrypt() {
-	sensitiveData := `
-	{
-		"originator": {
-			"originator_persons": [
-				{
-					"natural_person": {
-						"name": {
-							"name_identifiers": [
-								{
-									"primary_identifier": "Wu Xinli",
-									"name_identifier_type": "LEGL"
-								}
-							]
-						},
-						"national_identification": {
-							"national_identifier": "446005",
-							"national_identifier_type": "RAID",
-							"registration_authority": "RA000553"
-						},
-						"country_of_residence": "TZ"
+const sensitiveData = `
+{
+	"originator": {
+		"originator_persons": [
+			{
+				"natural_person": {
+					"name": {
+						"name_identifiers": [
+							{
+								"primary_identifier": "Wu Xinli",
+								"name_identifier_type": "LEGL"
+							}
+						]
+					},
+					"national_identification": {
+						"national_identifier": "446005",
+						"national_identifier_type": "RAID",
+						"registration_authority": "RA000553"
+					},
+					"country_of_residence": "TZ"
+				}
+			}
+		],
+		"account_numbers": [
+			"r3kmLJN5D28dHuH8vZNUZpMC43pEHpaocV"
+		]
+	},
+	"beneficiary": {
+		"beneficiary_persons": [
+			{
+				"legal_person": {
+					"name": {
+						"name_identifiers": [
+							{
+								"legal_person_name": "ABC Limited",
+								"legal_person_name_identifier_type": "LEGL"
+							}
+						]
 					}
 				}
-			],
-			"account_numbers": [
-				"r3kmLJN5D28dHuH8vZNUZpMC43pEHpaocV"
-			]
-		},
-		"beneficiary": {
-			"beneficiary_persons": [
-				{
-					"legal_person": {
-						"name": {
-							"name_identifiers": [
-								{
-									"legal_person_name": "ABC Limited",
-									"legal_person_name_identifier_type": "LEGL"
-								}
-							]
-						}
-					}
-				}
-			],
-			"account_numbers": [
-				"rAPERVgXZavGgiGv6xBgtiZurirW2yAmY"
-			]
-		}
-	}`
+			}
+		],
+		"account_numbers": [
+			"rAPERVgXZavGgiGv6xBgtiZurirW2yAmY"
+		]
+	}
+}`
 
+func encryptAndDecrypt() {
 	ciphertext, err := bridgeutil.EncryptString(sensitiveData, originatorPublicKey)
 	if err != nil {
 		panic(err)
@@ -163,19 +163,7 @@ func getCurrencies() {
 }
 
 func postPermissionRequest() {
-
-	originator := orderedmap.New()
-	originator.Set("name", "Antoine Griezmann")
-	originator.Set("date_of_birth", "1991-03-21")
-
-	beneficiary := orderedmap.New()
-	beneficiary.Set("name", "Leo Messi")
-
-	sensitiveData := orderedmap.New()
-	sensitiveData.Set("originator", originator)
-	sensitiveData.Set("beneficiary", beneficiary)
-
-	ciphertext, err := bridgeutil.Encrypt(sensitiveData, beneficiaryPublicKey)
+	ciphertext, err := bridgeutil.EncryptString(sensitiveData, beneficiaryPublicKey)
 	if err != nil {
 		panic(err)
 	}
