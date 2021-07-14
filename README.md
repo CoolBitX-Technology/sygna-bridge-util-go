@@ -179,34 +179,8 @@ privateIinfo := bridgeutil.Encrypt(
   recipientPublicKey,
 )
 
-originatorAddr := orderedmap.New()
-originatorAddr.Set("address", "r3kmLJN5D28dHuH8vZNUZpMC43pEHpaocV")
-
-originatorAddrs := make([]*orderedmap.OrderedMap, 1)
-originatorAddrs[0] = originatorAddr
-
-originatorVASP := orderedmap.New()
-originatorVASP.Set("vasp_code", "VASPUSNY1")
-originatorVASP.Set("addrs", originatorAddrs)
-
-beneficiaryAddrInfo := orderedmap.New()
-beneficiaryAddrInfo.Set("tag", "abc")
-
-beneficiaryAddrInfos := make([]*orderedmap.OrderedMap, 1)
-beneficiaryAddrInfos[0] = beneficiaryAddrInfo
-
-beneficiaryAddr := orderedmap.New()
-beneficiaryAddr.Set("address", "rAPERVgXZavGgiGv6xBgtiZurirW2yAmY")
-beneficiaryAddr.Set("addr_extra_info", beneficiaryAddrInfos)
-
-beneficiaryAddrs := make([]*orderedmap.OrderedMap, 1)
-beneficiaryAddrs[0] = beneficiaryAddr
-
-beneficiaryVASP := orderedmap.New()
-beneficiaryVASP.Set("vasp_code", "VASPUSNY2")
-beneficiaryVASP.Set("addrs", beneficiaryAddrs)
-
 transaction := orderedmap.New()
+// from example above
 transaction.Set("originator_vasp", originatorVASP)
 transaction.Set("beneficiary_vasp", beneficiaryVASP)
 transaction.Set("currency_id", "sygna:0x80000090")
@@ -272,3 +246,5 @@ bridgeutil.Sign(
 )
 finalResult := api.PostPermission(permissionData)
 ```
+
+For more complete example, please refer to [Example](example/example.go) file.
