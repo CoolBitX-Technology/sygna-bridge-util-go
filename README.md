@@ -1,6 +1,6 @@
 # Golang Sygna Bridge Util
 
-This is a Golang library to help you build servers/servies within Sygna Bridge Ecosystem. For more detail information, please see [Sygna Bridge](https://www.sygna.io/).
+This is a Golang library to help you build servers/services within Sygna Bridge Ecosystem. For more detail information, please see [Sygna Bridge](https://www.sygna.io/).
 
 ## Installation
 
@@ -25,20 +25,60 @@ Dealing with encrypting, decrypting, signing and verifying in Sygna Bridge.
 
 During the communication of VASPs, there are some private information that must be encrypted. We use ECIES(Elliptic Curve Integrated Encryption Scheme) to securely encrypt these private data so that they can only be accessed by the recipient.
 
+We're using [IVMS101 (interVASP Messaging Standard)](https://intervasp.org/) as our private information format.
+
+We also provide [IVMS101 Golang Utility](https://github.com/CoolBitX-Technology/sygna-bridge-ivms-utils/tree/master/golang) to construct data payload.
+
 ```golang
+sensitiveData := `
+{
+  "originator": {
+    "originator_persons": [
+      {
+        "natural_person": {
+          "name": {
+            "name_identifiers": [
+              {
+                "primary_identifier": "Wu Xinli",
+                "name_identifier_type": "LEGL"
+              }
+            ]
+          },
+          "national_identification": {
+            "national_identifier": "446005",
+            "national_identifier_type": "RAID",
+            "registration_authority": "RA000553"
+          },
+          "country_of_residence": "TZ"
+        }
+      }
+    ],
+    "account_numbers": [
+      "r3kmLJN5D28dHuH8vZNUZpMC43pEHpaocV"
+    ]
+  },
+  "beneficiary": {
+    "beneficiary_persons": [
+      {
+        "legal_person": {
+          "name": {
+            "name_identifiers": [
+              {
+                "legal_person_name": "ABC Limited",
+                "legal_person_name_identifier_type": "LEGL"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "account_numbers": [
+      "rAPERVgXZavGgiGv6xBgtiZurirW2yAmY"
+    ]
+  }
+}`
 
-originator := orderedmap.New()
-originator.Set("name", "Antoine Griezmann")
-originator.Set("date_of_birth", "1991-03-21")
-
-beneficiary := orderedmap.New()
-beneficiary.Set("name", "Leo Messi")
-
-sensitiveData := orderedmap.New()
-sensitiveData.Set("originator", originator)
-sensitiveData.Set("beneficiary", beneficiary)
-
-privateInfo,err := bridgeutil.Encrypt(
+privateInfo,err := bridgeutil.EncryptString(
   sensitiveData,
   recipientPubKey,
 )
@@ -51,9 +91,9 @@ decryptedPrivateInfo,err := bridgeutil.Decrypt(
 
 ### Sign and Verify
 
-In Sygna Bridge, we use secp256k1 ECDSA over sha256 of utf-8 json string to create signature on every API call. Since you need to provide the identical utf-8 string during verfication, the order of key-value pair you put into the object is important.
+In Sygna Bridge, we use secp256k1 ECDSA over sha256 of utf-8 json string to create signature on every API call. Since you need to provide the identical utf-8 string during verification, the order of key-value pair you put into the object is important.
 
-The following example is the snippet of originator's signing process of `premissionRequest` API call. If you put the key `transaction` before `private_info` in the object, the verification will fail in the central server.
+The following example is the snippet of originator's signing process of `permissionRequest` API call. If you put the key `transaction` before `private_info` in the object, the verification will fail in the central server.
 
 ````golang
 originatorAddr := orderedmap.New()
@@ -132,20 +172,9 @@ There are two API calls from **transaction originator** to Sygna Bridge Server d
 The full logic of originator would be like the following:
 
 ```golang
-
-originator := orderedmap.New()
-originator.Set("name", "Antoine Griezmann")
-originator.Set("date_of_birth", "1991-03-21")
-
-beneficiary := orderedmap.New()
-beneficiary.Set("name", "Leo Messi")
-
-sensitiveData := orderedmap.New()
-sensitiveData.Set("originator", originator)
-sensitiveData.Set("beneficiary", beneficiary)
-
 recipientPublicKey := api.GetVASPPublicKey("VASPUSNY1",verify)
 privateIinfo := bridgeutil.Encrypt(
+  // from example above
   sensitiveData,
   recipientPublicKey,
 )
@@ -214,7 +243,7 @@ response, err := api.PostPermissionRequest(
 
 transferID := response.Get("transfer_id")
 
-// Boradcast your transaction to blockchain after got and api reponse at your api server.
+// Broadcast your transaction to blockchain after got and api response at your api server.
 txid := "1a0c9bef489a136f7e05671f7f7fada2b9d96ac9f44598e1bcaa4779ac564dcd"
 
 // Inform Sygna Bridge that a specific transfer is successfully broadcasted to the blockchain.
@@ -228,18 +257,18 @@ response, err := api.PostTransactionID(txIDData)
 
 ### For Beneficiary
 
-There is only one api for Beneficiary VASP to call, which is `PostPermission`. After the beneficiary server confirm thet legitemacy of a transfer request, they will sign `{ transfer_id, permission_status }` using `Sign()` function, and send the result with signature to Sygna Bridge Central Server.
+There is only one api for Beneficiary VASP to call, which is `PostPermission`. After the beneficiary server confirm their legitimacy of a transfer request, they will sign `{ transfer_id, permission_status }` using `Sign()` function, and send the result with signature to Sygna Bridge Central Server.
 
 ```golang
 permissionStatus := bridgeutil.PermissionStatusAccepted // or bridgeutil.PermissionStatusRejected
 
-permissiontData := orderedmap.New()
-permissiontData.Set("transfer_id", trasnferID)
-permissiontData.Set("permission_status", permissionStatus)
+permissionData := orderedmap.New()
+permissionData.Set("transfer_id", transferID)
+permissionData.Set("permission_status", permissionStatus)
 
 bridgeutil.Sign(
-  permissiontData,
+  permissionData,
   beneficiaryPrivateKey,
 )
-finalResult := api.PostPermission(permissiontData)
+finalResult := api.PostPermission(permissionData)
 ```
