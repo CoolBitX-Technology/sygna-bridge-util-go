@@ -319,3 +319,23 @@ func postRetry() {
 	strResponse, _ := bridgeutil.OrderedMapToString(response)
 	log.Printf("postRetry response: %v\n", strResponse)
 }
+
+func postWalletAddressFilter() {
+	postWalletAddressFilterData := orderedmap.New()
+	postWalletAddressFilterData.Set("currency_id", "sygna:0x80000000")
+	postWalletAddressFilterData.Set("addrs", []string{
+		"14YjfWmQGTqLBPkG26qG81MKnZwV8z7wh1",
+		"bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+	})
+
+	api := &bridgeutil.BridgeAPI{
+		APIDomain: domain,
+		APIKey:    originatorAPIKey,
+	}
+	response, err := api.PostWalletAddressFilter(postWalletAddressFilterData)
+	if err != nil {
+		panic(err)
+	}
+	strResponse, _ := bridgeutil.OrderedMapToString(response...)
+	log.Printf("postWalletAddressFilter response: %v\n", strResponse)
+}
