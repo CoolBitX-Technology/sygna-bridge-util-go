@@ -31,22 +31,32 @@ func parseResponse(r *req.Resp, err error) (interface{}, error) {
 		return nil, err
 	}
 
-	o := orderedmap.New()
-	err = r.ToJSON(o)
-
+	m := orderedmap.New()
+	// if err is nil, the response would be json format
+	err = r.ToJSON(m)
+	if err == nil {
+		if !isHTTPStatusOK(statusCode) {
+			_, exist := m.Get("status")
+			if !exist {
+				m.Set("status", statusCode)
+			}
+			bMessage, _ := json.Marshal(m)
+			return nil, errors.New(string(bMessage))
+		}
+		return m, nil
+	}
+	// if err is not nil, the response would be array json format
+	var maps []*orderedmap.OrderedMap
+	err = r.ToJSON(&maps)
 	if err != nil {
 		return nil, err
 	}
-
 	if !isHTTPStatusOK(statusCode) {
-		_, exist := o.Get("status")
-		if !exist {
-			o.Set("status", statusCode)
-		}
-		bMessage, _ := json.Marshal(o)
+		bMessage, _ := json.Marshal(maps)
 		return nil, errors.New(string(bMessage))
 	}
-	return o, nil
+
+	return maps, nil
 }
 
 func request(api *BridgeAPI, method, path string, v ...interface{}) (interface{}, error) {
@@ -246,4 +256,20 @@ func (api *BridgeAPI) PostRetry(param *orderedmap.OrderedMap) (*orderedmap.Order
 		return nil, err
 	}
 	return response.(*orderedmap.OrderedMap), nil
+}
+
+/*
+PostWalletAddressFilter Retrieve address information
+
+You should active Blockchain Analytics to retrieve address information which is not belong to a SYGNA VASP.
+
+see https://developers.sygna.io/reference#bridgewallet-address-filter
+*/
+func (api *BridgeAPI) PostWalletAddressFilter(param *orderedmap.OrderedMap) ([]*orderedmap.OrderedMap, error) {
+	response, err := request(api, post, "v2/bridge/wallet-address-filter", req.BodyJSON(param))
+	if err != nil {
+		return nil, err
+	}
+
+	return response.([]*orderedmap.OrderedMap), nil
 }
