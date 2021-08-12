@@ -265,8 +265,13 @@ You should active Blockchain Analytics to retrieve address information which is 
 
 see https://developers.sygna.io/reference#bridgewallet-address-filter
 */
-func (api *BridgeAPI) PostWalletAddressFilter(param *orderedmap.OrderedMap) ([]*orderedmap.OrderedMap, error) {
-	response, err := request(api, post, "v2/bridge/wallet-address-filter", req.BodyJSON(param))
+func (api *BridgeAPI) PostWalletAddressFilter(param *orderedmap.OrderedMap, ignoreKYT ...bool) ([]*orderedmap.OrderedMap, error) {
+	q := req.Param{}
+
+	if len(ignoreKYT) > 0 {
+		q["ignore_kyt"] = ignoreKYT[0]
+	}
+	response, err := request(api, post, "v2/bridge/wallet-address-filter", req.BodyJSON(param), q)
 	if err != nil {
 		return nil, err
 	}

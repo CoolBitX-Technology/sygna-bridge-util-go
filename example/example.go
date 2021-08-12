@@ -332,7 +332,8 @@ func postWalletAddressFilter() {
 		APIDomain: domain,
 		APIKey:    originatorAPIKey,
 	}
-	response, err := api.PostWalletAddressFilter(postWalletAddressFilterData)
+	ignoreKYT := false
+	response, err := api.PostWalletAddressFilter(postWalletAddressFilterData, ignoreKYT)
 	if err != nil {
 		panic(err)
 	}
