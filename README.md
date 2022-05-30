@@ -187,7 +187,7 @@ transaction.Set("currency_id", "sygna:0x80000090")
 transaction.Set("amount", "4.51120135938784")
 
 permissionRequestData := orderedmap.New()
-permissionRequestData.Set("private_info", ciphertext)
+permissionRequestData.Set("private_info", privateIinfo)
 permissionRequestData.Set("transaction", transaction)
 permissionRequestData.Set("data_dt", "2020-07-13T05:56:53.088Z")
 
