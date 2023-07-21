@@ -61,6 +61,10 @@ func parseResponse(r *req.Resp, err error) (interface{}, error) {
 }
 
 func request(api *BridgeAPI, method, path string, v ...interface{}) (interface{}, error) {
+	if api.UserAgent == "" {
+		api.UserAgent = "util-go"
+	}
+
 	header := req.Header{
 		"Content-type": "application/json;",
 		"X-Api-Key":    api.APIKey,
@@ -219,6 +223,7 @@ func (api *BridgeAPI) PostPermissionRequest(param *orderedmap.OrderedMap) (*orde
 
 /*
 PostPermission Notify Sygna Bridge that you have confirmed specific permission Request
+
 	from other VASP. Should be called by Beneficiary Server
 
 see https://developers.sygna.io/reference#bridgepermission-3
