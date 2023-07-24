@@ -11,10 +11,11 @@ import (
 const get = "GET"
 const post = "POST"
 
-//BridgeAPI is a convenient struct for using sygna API
+// BridgeAPI is a convenient struct for using sygna API
 type BridgeAPI struct {
 	APIDomain string
 	APIKey    string
+	UserAgent string
 }
 
 func isHTTPStatusOK(statusCode int) bool {
@@ -60,9 +61,14 @@ func parseResponse(r *req.Resp, err error) (interface{}, error) {
 }
 
 func request(api *BridgeAPI, method, path string, v ...interface{}) (interface{}, error) {
+	if api.UserAgent == "" {
+		api.UserAgent = "util-go"
+	}
+
 	header := req.Header{
 		"Content-type": "application/json;",
 		"X-Api-Key":    api.APIKey,
+		"User-Agent":   api.UserAgent,
 	}
 
 	options := make([]interface{}, len(v)+1)
@@ -126,7 +132,7 @@ func (api *BridgeAPI) GetVASP(validate bool, isProdEnv ...bool) ([]*orderedmap.O
 	return mapVASPData, nil
 }
 
-//GetVASPPublicKey A Wrapper function of GetVASP to return specific VASP's Public Key.
+// GetVASPPublicKey A Wrapper function of GetVASP to return specific VASP's Public Key.
 func (api *BridgeAPI) GetVASPPublicKey(targetVASPCode string, validate bool, isProdEnv ...bool) (string, error) {
 	response, err := api.GetVASP(validate, isProdEnv...)
 
@@ -217,6 +223,7 @@ func (api *BridgeAPI) PostPermissionRequest(param *orderedmap.OrderedMap) (*orde
 
 /*
 PostPermission Notify Sygna Bridge that you have confirmed specific permission Request
+
 	from other VASP. Should be called by Beneficiary Server
 
 see https://developers.sygna.io/reference#bridgepermission-3
