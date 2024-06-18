@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/iancoleman/orderedmap"
+	"github.com/samber/lo"
 )
 
 // StringToOrderedMap convert string to *orderedmapOrderedMap
@@ -37,4 +38,9 @@ func castArrayToOrderedMapArray(data interface{}) []*orderedmap.OrderedMap {
 		mapArray[i] = &mapV
 	}
 	return mapArray
+}
+
+func castObjectToOrderedMapObject(data interface{}) *orderedmap.OrderedMap {
+	object := lo.ToPtr(data.(orderedmap.OrderedMap))
+	return object
 }
