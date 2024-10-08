@@ -3,6 +3,7 @@ package bridgeutil
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/iancoleman/orderedmap"
 	"github.com/imroc/req"
@@ -284,4 +285,50 @@ func (api *BridgeAPI) PostWalletAddressFilter(param *orderedmap.OrderedMap, igno
 	}
 
 	return response.([]*orderedmap.OrderedMap), nil
+}
+
+// Get vasp details by vasp code
+func (api *BridgeAPI) GetVASPDetails(vaspCode string, validate bool, isProdEnv ...bool) (*orderedmap.OrderedMap, error) {
+	response, err := request(api, get, fmt.Sprintf("v2/bridge/vasp/detail/%s", vaspCode))
+	if err != nil {
+		return nil, err
+	}
+	vaspData, _ := response.(*orderedmap.OrderedMap).Get("vasp_data")
+	VASPDataObject := castObjectToOrderedMapObject(vaspData)
+
+	if !validate {
+		return VASPDataObject, nil
+	}
+
+	isProd := false
+	if len(isProdEnv) > 0 {
+		isProd = isProdEnv[0]
+	}
+
+	publicKey := SygnaBridgeTestPubkey
+	if isProd {
+		publicKey = SygnaBridgeCentralPubkey
+	}
+
+	valid, err := Verify(response.(*orderedmap.OrderedMap), publicKey)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !valid {
+		return nil, errors.New("get VASP info error: invalid signature")
+	}
+
+	return VASPDataObject, nil
+}
+
+// PostServerStatus declares that the VASP’s server is currently in maintenance.
+func (api *BridgeAPI) PostServerStatus(param *orderedmap.OrderedMap) (*orderedmap.OrderedMap, error) {
+	response, err := request(api, post, "v2/bridge/vasp/server-status", req.BodyJSON(param))
+
+	if err != nil {
+		return nil, err
+	}
+	return response.(*orderedmap.OrderedMap), nil
 }
