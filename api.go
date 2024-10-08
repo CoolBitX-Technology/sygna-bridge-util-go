@@ -322,3 +322,13 @@ func (api *BridgeAPI) GetVASPDetails(vaspCode string, validate bool, isProdEnv .
 
 	return VASPDataObject, nil
 }
+
+// PostServerStatus declares that the VASP’s server is currently in maintenance.
+func (api *BridgeAPI) PostServerStatus(param *orderedmap.OrderedMap) (*orderedmap.OrderedMap, error) {
+	response, err := request(api, post, "v2/bridge/vasp/server-status", req.BodyJSON(param))
+
+	if err != nil {
+		return nil, err
+	}
+	return response.(*orderedmap.OrderedMap), nil
+}
