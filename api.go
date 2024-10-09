@@ -324,7 +324,7 @@ func (api *BridgeAPI) GetVASPDetails(vaspCode string, validate bool, isProdEnv .
 }
 
 // GetVASPUsage Get VASP usage by timestamp
-func (api *BridgeAPI) GetVASPUsage(startAt, endAt int64) (*orderedmap.OrderedMap, error) {
+func (api *BridgeAPI) GetVASPUsages(startAt, endAt int64, validate bool, isProdEnv ...bool) (*orderedmap.OrderedMap, error) {
 	param := req.Param{
 		"start_at": startAt,
 		"end_at":   endAt,
@@ -335,5 +335,32 @@ func (api *BridgeAPI) GetVASPUsage(startAt, endAt int64) (*orderedmap.OrderedMap
 		return nil, err
 	}
 
-	return response.(*orderedmap.OrderedMap), nil
+	usageData, _ := response.(*orderedmap.OrderedMap).Get("data")
+	usageDataObject := castObjectToOrderedMapObject(usageData)
+
+	if !validate {
+		return usageDataObject, nil
+	}
+
+	isProd := false
+	if len(isProdEnv) > 0 {
+		isProd = isProdEnv[0]
+	}
+
+	publicKey := SygnaBridgeTestPubkey
+	if isProd {
+		publicKey = SygnaBridgeCentralPubkey
+	}
+
+	valid, err := Verify(response.(*orderedmap.OrderedMap), publicKey)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !valid {
+		return nil, errors.New("get VASP usages error: invalid signature")
+	}
+
+	return usageDataObject, nil
 }
