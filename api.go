@@ -324,7 +324,7 @@ func (api *BridgeAPI) GetVASPDetails(vaspCode string, validate bool, isProdEnv .
 }
 
 // GetVASPUsage Get VASP usage by timestamp
-func (api *BridgeAPI) GetVASPUsages(startAt, endAt int64, validate bool, isProdEnv ...bool) (*orderedmap.OrderedMap, error) {
+func (api *BridgeAPI) GetVASPUsages(startAt, endAt int64, validate bool, isProdEnv ...bool) ([]*orderedmap.OrderedMap, error) {
 	param := req.Param{
 		"start_at": startAt,
 		"end_at":   endAt,
@@ -336,7 +336,7 @@ func (api *BridgeAPI) GetVASPUsages(startAt, endAt int64, validate bool, isProdE
 	}
 
 	usageData, _ := response.(*orderedmap.OrderedMap).Get("data")
-	usageDataObject := castObjectToOrderedMapObject(usageData)
+	usageDataObject := castArrayToOrderedMapArray(usageData)
 
 	if !validate {
 		return usageDataObject, nil
