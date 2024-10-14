@@ -345,8 +345,8 @@ func postServerStatus() {
 	postServerStatusData := orderedmap.New()
 	postServerStatusData.Set("vasp_code", "VASPUSNY2")
 	postServerStatusData.Set("status", "maintaining")
-	postServerStatusData.Set("started_at", "1724808400000")
-	postServerStatusData.Set("ended_at", "1724808400000")
+	postServerStatusData.Set("started_at", 1724808400000)
+	postServerStatusData.Set("ended_at", 1724808400000)
 
 	if err := bridgeutil.Sign(postServerStatusData, beneficiaryPrivatekey); err != nil {
 		panic(err)
