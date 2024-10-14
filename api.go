@@ -323,12 +323,44 @@ func (api *BridgeAPI) GetVASPDetails(vaspCode string, validate bool, isProdEnv .
 	return VASPDataObject, nil
 }
 
-// PostServerStatus declares that the VASP’s server is currently in maintenance.
-func (api *BridgeAPI) PostServerStatus(param *orderedmap.OrderedMap) (*orderedmap.OrderedMap, error) {
-	response, err := request(api, post, "v2/bridge/vasp/server-status", req.BodyJSON(param))
+// GetVASPUsage Get VASP usage by timestamp
+func (api *BridgeAPI) GetVASPUsages(startAt, endAt int64, validate bool, isProdEnv ...bool) ([]*orderedmap.OrderedMap, error) {
+	param := req.Param{
+		"start_at": startAt,
+		"end_at":   endAt,
+	}
+	response, err := request(api, get, "v2/bridge/vasp/usage", param)
 
 	if err != nil {
 		return nil, err
 	}
-	return response.(*orderedmap.OrderedMap), nil
+
+	usageData, _ := response.(*orderedmap.OrderedMap).Get("data")
+	usageDataObject := castArrayToOrderedMapArray(usageData)
+
+	if !validate {
+		return usageDataObject, nil
+	}
+
+	isProd := false
+	if len(isProdEnv) > 0 {
+		isProd = isProdEnv[0]
+	}
+
+	publicKey := SygnaBridgeTestPubkey
+	if isProd {
+		publicKey = SygnaBridgeCentralPubkey
+	}
+
+	valid, err := Verify(response.(*orderedmap.OrderedMap), publicKey)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !valid {
+		return nil, errors.New("get VASP usages error: invalid signature")
+	}
+
+	return usageDataObject, nil
 }
