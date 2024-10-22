@@ -27,11 +27,12 @@ func isHTTPStatusOK(statusCode int) bool {
 }
 
 func parseResponse(r *req.Resp, err error) (interface{}, error) {
-	resp := r.Response()
-	statusCode := resp.StatusCode
 	if err != nil {
 		return nil, err
 	}
+
+	resp := r.Response()
+	statusCode := resp.StatusCode
 
 	m := orderedmap.New()
 	// if err is nil, the response would be json format
