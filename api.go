@@ -267,6 +267,15 @@ func (api *BridgeAPI) PostRetry(param *orderedmap.OrderedMap) (*orderedmap.Order
 	return response.(*orderedmap.OrderedMap), nil
 }
 
+func (api *BridgeAPI) PostTransactionCDD(param *orderedmap.OrderedMap) (*orderedmap.OrderedMap, error) {
+	response, err := request(api, post, "v2/bridge/transaction/cdd", req.BodyJSON(param))
+
+	if err != nil {
+		return nil, err
+	}
+	return response.(*orderedmap.OrderedMap), nil
+}
+
 /*
 PostWalletAddressFilter Retrieve address information
 

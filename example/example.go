@@ -69,6 +69,8 @@ const sensitiveData = `
 	}
 }`
 
+const OtherCDDInfo = "[National ID] Passport number 123456789"
+
 func encryptAndDecrypt() {
 	ciphertext, err := bridgeutil.EncryptString(sensitiveData, originatorPublicKey)
 	if err != nil {
@@ -366,4 +368,30 @@ func postServerStatus() {
 		panic(err)
 	}
 	log.Printf("postServerStatus response: %v\n", strResponse)
+}
+
+func postTransactionCDD() {
+	ciphertext, err := bridgeutil.EncryptString(OtherCDDInfo, beneficiaryPublicKey)
+	if err != nil {
+		panic(err)
+	}
+	postTransactionCDDData := orderedmap.New()
+	postTransactionCDDData.Set("transfer_id", "e8867006137a94f13656198be8fa720cf5b822f70adf6fe71a25538d0b2c230e")
+	postTransactionCDDData.Set("other_cdd_info", ciphertext)
+
+	err = bridgeutil.Sign(postTransactionCDDData, originatorPrivatekey)
+	if err != nil {
+		panic(err)
+	}
+
+	api := &bridgeutil.BridgeAPI{
+		APIDomain: domain,
+		APIKey:    originatorAPIKey,
+	}
+	response, err := api.PostTransactionCDD(postTransactionCDDData)
+	if err != nil {
+		panic(err)
+	}
+	strResponse, _ := bridgeutil.OrderedMapToString(response)
+	log.Printf("PostTransactionCDD response: %v\n", strResponse)
 }
