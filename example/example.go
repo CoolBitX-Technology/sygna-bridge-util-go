@@ -395,3 +395,27 @@ func postTransactionCDD() {
 	strResponse, _ := bridgeutil.OrderedMapToString(response)
 	log.Printf("PostTransactionCDD response: %v\n", strResponse)
 }
+
+func postTransactionCDDRequest() {
+	requestCDDData := orderedmap.New()
+	address := []string{"address_line", "country"}
+	requestCDDData.Set("geographic_address", address)
+
+	cddRequestBody := orderedmap.New()
+	cddRequestBody.Set("transfer_id", "463412c611e53aefcd016a7efda1328e7a1067ab659a5a45a60c1c7023ceb133")
+	cddRequestBody.Set("request_cdd_data", requestCDDData)
+	if err := bridgeutil.Sign(cddRequestBody, originatorPrivatekey); err != nil {
+		panic(err)
+	}
+
+	api := &bridgeutil.BridgeAPI{
+		APIDomain: domain,
+		APIKey:    originatorAPIKey,
+	}
+	response, err := api.PostTransactionCDDRequest(cddRequestBody)
+	if err != nil {
+		panic(err)
+	}
+	strResponse, _ := bridgeutil.OrderedMapToString(response)
+	log.Printf("PostTransactionCDDRequest response: %v\n", strResponse)
+}
