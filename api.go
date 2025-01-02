@@ -393,3 +393,12 @@ func (api *BridgeAPI) PostServerStatus(param *orderedmap.OrderedMap) (*orderedma
 	}
 	return response.(*orderedmap.OrderedMap), nil
 }
+
+func (api *BridgeAPI) PostVASPBeneficiaryCheckingRule(param *orderedmap.OrderedMap) (*orderedmap.OrderedMap, error) {
+	response, err := request(api, post, "v2/bridge/vasp/beneficiary-checking-rule", req.BodyJSON(param))
+
+	if err != nil {
+		return nil, err
+	}
+	return response.(*orderedmap.OrderedMap), nil
+}

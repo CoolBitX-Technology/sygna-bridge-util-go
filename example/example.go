@@ -419,3 +419,30 @@ func postTransactionCDDRequest() {
 	strResponse, _ := bridgeutil.OrderedMapToString(response)
 	log.Printf("PostTransactionCDDRequest response: %v\n", strResponse)
 }
+
+func postVASPBeneficiaryCheckingRule() {
+	checkingRuleData := orderedmap.New()
+
+	naturalPerson := orderedmap.New()
+	naturalPerson.Set("country_of_residence", true)
+	naturalPerson.Set("customer_identification", false)
+
+	dateAndPlaceOfBirth := orderedmap.New()
+	dateAndPlaceOfBirth.Set("date_of_birth", true)
+	dateAndPlaceOfBirth.Set("place_of_birth", true)
+
+	naturalPerson.Set("date_and_place_of_birth", dateAndPlaceOfBirth)
+
+	checkingRuleData.Set("natural_person", naturalPerson)
+
+	api := &bridgeutil.BridgeAPI{
+		APIDomain: domain,
+		APIKey:    originatorAPIKey,
+	}
+	response, err := api.PostVASPBeneficiaryCheckingRule(checkingRuleData)
+	if err != nil {
+		panic(err)
+	}
+	strResponse, _ := bridgeutil.OrderedMapToString(response)
+	log.Printf("PostVASPBeneficiaryCheckingRule response: %v\n", strResponse)
+}
