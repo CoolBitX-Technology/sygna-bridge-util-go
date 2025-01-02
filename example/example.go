@@ -423,6 +423,7 @@ func postTransactionCDDRequest() {
 func postVASPBeneficiaryCheckingRule() {
 	checkingRuleData := orderedmap.New()
 
+	// natural person
 	naturalPerson := orderedmap.New()
 	naturalPerson.Set("country_of_residence", true)
 	naturalPerson.Set("customer_identification", false)
@@ -434,6 +435,23 @@ func postVASPBeneficiaryCheckingRule() {
 	naturalPerson.Set("date_and_place_of_birth", dateAndPlaceOfBirth)
 
 	checkingRuleData.Set("natural_person", naturalPerson)
+
+	// legal person
+	legalPerson := orderedmap.New()
+	legalPerson.Set("country_of_registration", false)
+	legalPerson.Set("customer_identification", true)
+
+	nameIdentifiers := orderedmap.New()
+	nameIdentifiers.Set("legal_person_name_identifier_type", true)
+	nameIdentifiers.Set("legal_person_name", true)
+
+	legalPerson.Set("name_identifiers", nameIdentifiers)
+
+	checkingRuleData.Set("legal_person", legalPerson)
+
+	if err := bridgeutil.Sign(checkingRuleData, beneficiaryPrivatekey); err != nil {
+		panic(err)
+	}
 
 	api := &bridgeutil.BridgeAPI{
 		APIDomain: domain,
