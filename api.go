@@ -402,3 +402,12 @@ func (api *BridgeAPI) PostVASPBeneficiaryCheckingRule(param *orderedmap.OrderedM
 	}
 	return response.(*orderedmap.OrderedMap), nil
 }
+
+func (api *BridgeAPI) PostTransactionCancel(param *orderedmap.OrderedMap) (*orderedmap.OrderedMap, error) {
+	response, err := request(api, post, "v2/bridge/transaction/cancel", req.BodyJSON(param))
+
+	if err != nil {
+		return nil, err
+	}
+	return response.(*orderedmap.OrderedMap), nil
+}
