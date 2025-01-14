@@ -483,3 +483,35 @@ func postTransactionCancel() {
 	strResponse, _ := bridgeutil.OrderedMapToString(response)
 	log.Printf("PostTransactionCancel response: %v\n", strResponse)
 }
+
+func postAddressValidation() {
+	addrs := []*orderedmap.OrderedMap{}
+
+	addr1ExtraInfo := orderedmap.New()
+	addr1ExtraInfo.Set("tag", "123")
+
+	addr1 := orderedmap.New()
+	addr1.Set("address", "rpdtDLU9sXyNxNKx1Z4kWVky6CeW6nM8xo")
+	addr1.Set("addr_extra_info", addr1ExtraInfo)
+
+	addrs = append(addrs, addr1)
+
+	addressValidationBody := orderedmap.New()
+	addressValidationBody.Set("vasp_code", "SYGNTWTP")
+	addressValidationBody.Set("currency_id", "sygna:0x80000090")
+	addressValidationBody.Set("addrs", addrs)
+	if err := bridgeutil.Sign(addressValidationBody, originatorPrivatekey); err != nil {
+		panic(err)
+	}
+
+	api := &bridgeutil.BridgeAPI{
+		APIDomain: domain,
+		APIKey:    originatorAPIKey,
+	}
+	response, err := api.PostAddressValidation(addressValidationBody)
+	if err != nil {
+		panic(err)
+	}
+	strResponse, _ := bridgeutil.OrderedMapToString(response)
+	log.Printf("PostAddressValidation response: %v\n", strResponse)
+}
