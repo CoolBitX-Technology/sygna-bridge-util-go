@@ -5,14 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/ethereum/go-ethereum/crypto/secp256k1"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/iancoleman/orderedmap"
 )
 
-//Sign Sign data with provided Private Key.
+// Sign Sign data with provided Private Key.
 func Sign(message *orderedmap.OrderedMap, privateKey string) error {
 
-	bPrivateKey, err := hex.DecodeString(privateKey)
+	bPrivateKey, err := crypto.HexToECDSA(privateKey)
 	if err != nil {
 		return err
 	}
@@ -24,7 +24,7 @@ func Sign(message *orderedmap.OrderedMap, privateKey string) error {
 		return err
 	}
 
-	bSignature, err := secp256k1.Sign(sha256Sum(bMessage), bPrivateKey)
+	bSignature, err := crypto.Sign(sha256Sum(bMessage), bPrivateKey)
 	if err != nil {
 		return err
 	}
@@ -35,7 +35,7 @@ func Sign(message *orderedmap.OrderedMap, privateKey string) error {
 	return nil
 }
 
-//Verify Verify data with provided Public Key
+// Verify Verify data with provided Public Key
 func Verify(message *orderedmap.OrderedMap, publicKey string) (bool, error) {
 	bPublicKey, err := hex.DecodeString(publicKey)
 	if err != nil {
@@ -62,5 +62,5 @@ func Verify(message *orderedmap.OrderedMap, publicKey string) (bool, error) {
 		return false, err
 	}
 
-	return secp256k1.VerifySignature(bPublicKey, sha256Sum(bClone), bSignature), nil
+	return crypto.VerifySignature(bPublicKey, sha256Sum(bClone), bSignature), nil
 }
