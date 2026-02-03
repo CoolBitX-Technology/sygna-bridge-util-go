@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
+	"sync"
 
 	"github.com/iancoleman/orderedmap"
-	"github.com/imroc/req"
+	"github.com/imroc/req/v3"
 )
 
 const get = "GET"
@@ -14,9 +16,18 @@ const post = "POST"
 
 // BridgeAPI is a convenient struct for using sygna API
 type BridgeAPI struct {
-	APIDomain string
-	APIKey    string
-	UserAgent string
+	APIDomain  string
+	APIKey     string
+	UserAgent  string
+	client     *req.Client
+	clientOnce sync.Once
+}
+
+func (api *BridgeAPI) getClient() *req.Client {
+	api.clientOnce.Do(func() {
+		api.client = req.C()
+	})
+	return api.client
 }
 
 func isHTTPStatusOK(statusCode int) bool {
@@ -26,17 +37,16 @@ func isHTTPStatusOK(statusCode int) bool {
 	return false
 }
 
-func parseResponse(r *req.Resp, err error) (interface{}, error) {
+func parseResponse(resp *req.Response, err error) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
 
-	resp := r.Response()
 	statusCode := resp.StatusCode
 
 	m := orderedmap.New()
 	// if err is nil, the response would be json format
-	err = r.ToJSON(m)
+	err = resp.UnmarshalJson(m)
 	if err == nil {
 		if !isHTTPStatusOK(statusCode) {
 			_, exist := m.Get("status")
@@ -50,7 +60,7 @@ func parseResponse(r *req.Resp, err error) (interface{}, error) {
 	}
 	// if err is not nil, the response would be array json format
 	var maps []*orderedmap.OrderedMap
-	err = r.ToJSON(&maps)
+	err = resp.UnmarshalJson(&maps)
 	if err != nil {
 		return nil, err
 	}
@@ -62,34 +72,41 @@ func parseResponse(r *req.Resp, err error) (interface{}, error) {
 	return maps, nil
 }
 
-func request(api *BridgeAPI, method, path string, v ...interface{}) (interface{}, error) {
+func request(api *BridgeAPI, method, path string, queryParams map[string]interface{}, body interface{}) (interface{}, error) {
 	if api.UserAgent == "" {
 		api.UserAgent = "util-go"
 	}
 
-	header := req.Header{
-		"Content-type": "application/json;",
-		"X-Api-Key":    api.APIKey,
-		"User-Agent":   api.UserAgent,
+	client := api.getClient()
+	url := api.APIDomain + path
+
+	reqBuilder := client.R().
+		SetHeader("Content-type", "application/json;").
+		SetHeader("X-Api-Key", api.APIKey).
+		SetHeader("User-Agent", api.UserAgent)
+
+	if len(queryParams) > 0 {
+		for k, v := range queryParams {
+			reqBuilder.SetQueryParam(k, fmt.Sprint(v))
+		}
 	}
 
-	options := make([]interface{}, len(v)+1)
-	options[0] = header
-	copy(options[1:], v)
+	if body != nil {
+		reqBuilder.SetBodyJsonMarshal(body)
+	}
 
-	var r *req.Resp
+	var resp *req.Response
 	var err error
 
-	url := api.APIDomain + path
 	switch method {
 	case get:
-		r, err = req.Get(url, options...)
+		resp, err = reqBuilder.Get(url)
 	case post:
-		r, err = req.Post(url, options...)
+		resp, err = reqBuilder.Post(url)
 	default:
 		panic(errors.New("unsupported method"))
 	}
-	return parseResponse(r, err)
+	return parseResponse(resp, err)
 }
 
 /*
@@ -100,7 +117,7 @@ Set isProdEnv true to use SygnaBridgeCentralPubkey to Verify data.
 see https://developers.sygna.io/reference#bridgevasp-3
 */
 func (api *BridgeAPI) GetVASP(validate bool, isProdEnv ...bool) ([]*orderedmap.OrderedMap, error) {
-	response, err := request(api, get, "v2/bridge/vasp")
+	response, err := request(api, get, "v2/bridge/vasp", nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -158,10 +175,10 @@ GetStatus Get detail of particular transaction permission request
 see https://developers.sygna.io/reference#bridgestatus-3
 */
 func (api *BridgeAPI) GetStatus(transferID string) (*orderedmap.OrderedMap, error) {
-	param := req.Param{
+	param := map[string]interface{}{
 		"transfer_id": transferID,
 	}
-	response, err := request(api, get, "v2/bridge/transaction/status", param)
+	response, err := request(api, get, "v2/bridge/transaction/status", param, nil)
 
 	if err != nil {
 		return nil, err
@@ -175,7 +192,7 @@ GetCurrencies Get supported currencies
 see https://developers.sygna.io/reference#bridgecurrencies
 */
 func (api *BridgeAPI) GetCurrencies(queryParams *orderedmap.OrderedMap) ([]*orderedmap.OrderedMap, error) {
-	param := req.Param{}
+	param := map[string]interface{}{}
 
 	if queryParams != nil {
 		for _, k := range queryParams.Keys() {
@@ -183,7 +200,7 @@ func (api *BridgeAPI) GetCurrencies(queryParams *orderedmap.OrderedMap) ([]*orde
 			param[k] = v
 		}
 	}
-	response, err := request(api, get, "v2/bridge/transaction/currencies", param)
+	response, err := request(api, get, "v2/bridge/transaction/currencies", param, nil)
 
 	if err != nil {
 		return nil, err
@@ -201,7 +218,7 @@ PostBeneficiaryEndpointURL Revise beneficiary endpoint url
 see https://developers.sygna.io/reference#bridgebeneficiaryendpointurl
 */
 func (api *BridgeAPI) PostBeneficiaryEndpointURL(param *orderedmap.OrderedMap) (*orderedmap.OrderedMap, error) {
-	response, err := request(api, post, "v2/bridge/vasp/beneficiary-endpoint-url", req.BodyJSON(param))
+	response, err := request(api, post, "v2/bridge/vasp/beneficiary-endpoint-url", nil, param)
 
 	if err != nil {
 		return nil, err
@@ -215,7 +232,7 @@ PostPermissionRequest Should be called by the originator VASP to inform Sygna Br
 see https://developers.sygna.io/reference#bridgepermissionrequest-3
 */
 func (api *BridgeAPI) PostPermissionRequest(param *orderedmap.OrderedMap) (*orderedmap.OrderedMap, error) {
-	response, err := request(api, post, "v2/bridge/transaction/permission-request", req.BodyJSON(param))
+	response, err := request(api, post, "v2/bridge/transaction/permission-request", nil, param)
 
 	if err != nil {
 		return nil, err
@@ -231,7 +248,7 @@ PostPermission Notify Sygna Bridge that you have confirmed specific permission R
 see https://developers.sygna.io/reference#bridgepermission-3
 */
 func (api *BridgeAPI) PostPermission(param *orderedmap.OrderedMap) (*orderedmap.OrderedMap, error) {
-	response, err := request(api, post, "v2/bridge/transaction/permission", req.BodyJSON(param))
+	response, err := request(api, post, "v2/bridge/transaction/permission", nil, param)
 
 	if err != nil {
 		return nil, err
@@ -245,7 +262,7 @@ PostTransactionID Send broadcasted transaction id to Sygna Bridge for purpose of
 see https://developers.sygna.io/reference#bridgetransactionid-3
 */
 func (api *BridgeAPI) PostTransactionID(param *orderedmap.OrderedMap) (*orderedmap.OrderedMap, error) {
-	response, err := request(api, post, "v2/bridge/transaction/txid", req.BodyJSON(param))
+	response, err := request(api, post, "v2/bridge/transaction/txid", nil, param)
 
 	if err != nil {
 		return nil, err
@@ -259,7 +276,7 @@ PostRetry Retrieve the lost transfer requests
 see https://developers.sygna.io/reference#bridgeretry-3
 */
 func (api *BridgeAPI) PostRetry(param *orderedmap.OrderedMap) (*orderedmap.OrderedMap, error) {
-	response, err := request(api, post, "v2/bridge/transaction/retry", req.BodyJSON(param))
+	response, err := request(api, post, "v2/bridge/transaction/retry", nil, param)
 
 	if err != nil {
 		return nil, err
@@ -268,7 +285,7 @@ func (api *BridgeAPI) PostRetry(param *orderedmap.OrderedMap) (*orderedmap.Order
 }
 
 func (api *BridgeAPI) PostTransactionCDDRequest(param *orderedmap.OrderedMap) (*orderedmap.OrderedMap, error) {
-	response, err := request(api, post, "v2/bridge/transaction/cdd-request", req.BodyJSON(param))
+	response, err := request(api, post, "v2/bridge/transaction/cdd-request", nil, param)
 	if err != nil {
 		return nil, err
 	}
@@ -277,7 +294,7 @@ func (api *BridgeAPI) PostTransactionCDDRequest(param *orderedmap.OrderedMap) (*
 }
 
 func (api *BridgeAPI) PostTransactionCDD(param *orderedmap.OrderedMap) (*orderedmap.OrderedMap, error) {
-	response, err := request(api, post, "v2/bridge/transaction/cdd", req.BodyJSON(param))
+	response, err := request(api, post, "v2/bridge/transaction/cdd", nil, param)
 
 	if err != nil {
 		return nil, err
@@ -293,12 +310,12 @@ You should active Blockchain Analytics to retrieve address information which is 
 see https://developers.sygna.io/reference#bridgewallet-address-filter
 */
 func (api *BridgeAPI) PostWalletAddressFilter(param *orderedmap.OrderedMap, ignoreKYT ...bool) ([]*orderedmap.OrderedMap, error) {
-	q := req.Param{}
+	q := map[string]interface{}{}
 
 	if len(ignoreKYT) > 0 {
 		q["ignore_kyt"] = ignoreKYT[0]
 	}
-	response, err := request(api, post, "v2/bridge/wallet-address-filter", req.BodyJSON(param), q)
+	response, err := request(api, post, "v2/bridge/wallet-address-filter", q, param)
 	if err != nil {
 		return nil, err
 	}
@@ -308,7 +325,7 @@ func (api *BridgeAPI) PostWalletAddressFilter(param *orderedmap.OrderedMap, igno
 
 // Get vasp details by vasp code
 func (api *BridgeAPI) GetVASPDetails(vaspCode string, validate bool, isProdEnv ...bool) (*orderedmap.OrderedMap, error) {
-	response, err := request(api, get, fmt.Sprintf("v2/bridge/vasp/detail/%s", vaspCode))
+	response, err := request(api, get, fmt.Sprintf("v2/bridge/vasp/detail/%s", url.PathEscape(vaspCode)), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -344,11 +361,11 @@ func (api *BridgeAPI) GetVASPDetails(vaspCode string, validate bool, isProdEnv .
 
 // GetVASPUsage Get VASP usage by timestamp
 func (api *BridgeAPI) GetVASPUsages(startAt, endAt int64, validate bool, isProdEnv ...bool) ([]*orderedmap.OrderedMap, error) {
-	param := req.Param{
+	param := map[string]interface{}{
 		"start_at": startAt,
 		"end_at":   endAt,
 	}
-	response, err := request(api, get, "v2/bridge/vasp/usage", param)
+	response, err := request(api, get, "v2/bridge/vasp/usage", param, nil)
 
 	if err != nil {
 		return nil, err
@@ -386,7 +403,7 @@ func (api *BridgeAPI) GetVASPUsages(startAt, endAt int64, validate bool, isProdE
 
 // PostServerStatus declares that the VASP’s server is currently in maintenance.
 func (api *BridgeAPI) PostServerStatus(param *orderedmap.OrderedMap) (*orderedmap.OrderedMap, error) {
-	response, err := request(api, post, "v2/bridge/vasp/server-status", req.BodyJSON(param))
+	response, err := request(api, post, "v2/bridge/vasp/server-status", nil, param)
 
 	if err != nil {
 		return nil, err
@@ -395,7 +412,7 @@ func (api *BridgeAPI) PostServerStatus(param *orderedmap.OrderedMap) (*orderedma
 }
 
 func (api *BridgeAPI) PostVASPBeneficiaryCheckingRule(param *orderedmap.OrderedMap) (*orderedmap.OrderedMap, error) {
-	response, err := request(api, post, "v2/bridge/vasp/beneficiary-checking-rule", req.BodyJSON(param))
+	response, err := request(api, post, "v2/bridge/vasp/beneficiary-checking-rule", nil, param)
 
 	if err != nil {
 		return nil, err
@@ -404,7 +421,7 @@ func (api *BridgeAPI) PostVASPBeneficiaryCheckingRule(param *orderedmap.OrderedM
 }
 
 func (api *BridgeAPI) PostTransactionCancel(param *orderedmap.OrderedMap) (*orderedmap.OrderedMap, error) {
-	response, err := request(api, post, "v2/bridge/transaction/cancel", req.BodyJSON(param))
+	response, err := request(api, post, "v2/bridge/transaction/cancel", nil, param)
 
 	if err != nil {
 		return nil, err
@@ -413,7 +430,7 @@ func (api *BridgeAPI) PostTransactionCancel(param *orderedmap.OrderedMap) (*orde
 }
 
 func (api *BridgeAPI) PostAddressValidation(param *orderedmap.OrderedMap) (*orderedmap.OrderedMap, error) {
-	response, err := request(api, post, "v2/bridge/transaction/address-validation", req.BodyJSON(param))
+	response, err := request(api, post, "v2/bridge/transaction/address-validation", nil, param)
 
 	if err != nil {
 		return nil, err
